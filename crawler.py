@@ -7,11 +7,70 @@ from bs4 import BeautifulSoup
 from lxml import etree as ET
 from time import sleep
 
+class AuctionItem:
+	def __init__(self, category):
+		self.root = ET.Element('auction')
+		self.head = ET.SubElement(self.root, 'head')
+		self.body = ET.SubElement(self.root, 'body')
+		site = ET.SubElement(self.head, 'website')
+		site.text = u'Yahoo!奇摩拍賣'
+		cat = ET.SubElement(self.head, 'category')
+		cat.text = u'女裝與服飾配件'
+		subcat = ET.SubElement(self.head, 'subcategory')
+		subcat.text = category
+		date = ET.SubElement(self.head, 'date')
+		date.text = get_current_time()
+
+	def add_item(self, name, finish_time, price, sold_amount):
+		item = ET.SubElement(self.body, 'item')
+		item_name = ET.SubElement(item, 'name')
+		item_name.text = name
+		#item_time = ET.SubElement(item, 'time')
+		#item_time.text = finish_time
+		item_price = ET.SubElement(item, 'price')
+		item_price.text = price
+		item_amount = ET.SubElement(item, 'amount')
+		item_amount.text = sold_amount
+
+	def add_total(self, num):
+		total = ET.SubElement(self.head, 'total')
+		total.text = str(num)
+
+	def get_root(self):
+		return self.root
+
+
 def get_current_time():
 	return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-def extract_content(url):
+def extract_content_mall(url, headers):
+	p_info = {}
+
+	request = urllib2.Request(url, None, headers)
+
+	try:
+		response = urllib2.urlopen(request)
+	except:
+		print '*** Access error ***'
+		print url
+		return 'error'
+
+	html = response.read()
+
+	soup = BeautifulSoup(html, 'html5lib')
+	p_info['name'] = soup.find('span', {'itemprop': 'name'}).get_text()
+	p_info['price'] = soup.find('span', {'itemprop': 'price'}).get_text()[:-1]
+	amount = soup.find('li', text = re.compile(u'銷售件數：'))
+	if not (amount is None):
+		p_info['amount'] = amount.get_text()[4:]
+	else:
+		p_info['amount'] = 'N/A'
+
+	return p_info
+
+'''
+def extract_content_auction(url):
 	p_info = {}
 
 	try:
@@ -30,27 +89,25 @@ def extract_content(url):
 	p_info['amount'] = pattern.sub('', p_info['amount'])
 
 	return p_info
+'''
 
-
-def crawler():
-	url = 'https://tw.bid.yahoo.com/tw/23000-allsubcats.html?.r=1400475784'
-	#header = ('User-Agent','Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1547.66 Safari/537.36 LBBROWSER')
-	#opener = urllib2.build_opener()
-	#opener.addheaders = [header]
+def crawler(target_url, headers):
+	request = urllib2.Request(target_url, None, headers)
 
 	try:
-		#html = opener.open(url).read()
-		html = urllib2.urlopen(url).read()
-	except:
-		print '*** Access error ' + url
+		response = urllib2.urlopen(request)
+	except URLError as e:
+		print '*** Access error ***'
+		print e.reason
 
-
+	html = response.read()
 
 	soup = BeautifulSoup(html, 'html5lib')
 	links = soup.find_all('a', class_ = 'title')
 	
-	targets = []
-	categories = []
+	# Retrieve all needed out-links in the target_url
+	targets = []	# category urls
+	categories = []	# category names
 	pattern = re.compile('-category-leaf')
 	for link in links:
 		l = str(link['href'])
@@ -59,74 +116,78 @@ def crawler():
 			targets.append(l)
 			categories.append(cat)
 
-	count = 0
 	for index, target in enumerate(targets):
-		if count < 3:
-			print 'start ' + categories[index]
-			root = ET.Element('auction')
-			head = ET.SubElement(root, 'head')
-			body = ET.SubElement(root, 'body')
-			site = ET.SubElement(head, 'website')
-			site.text = u'Yahoo!奇摩拍賣'
-			cat = ET.SubElement(head, 'category')
-			cat.text = u'女裝與服飾配件'
-			subcat = ET.SubElement(head, 'subcategory')
-			subcat.text = categories[index]
-			date = ET.SubElement(head, 'date')
-			date.text = get_current_time()
+		print 'start ' + categories[index]
 
-			#html = urllib2.urlopen(target).read()
-			#soup = BeautifulSoup(html, 'html5lib')
-			#link = soup.find('span', text = '出價次').parent['href']
-			#page_url = 'https://tw.bid.yahoo.com/tw/' + link
+		# Build xml structure
+		items_root = AuctionItem(categories[index])
+		items_total = 0
 
-			page_url = target
-			
-			cnt = 0	
-			suc_cnt = 0
-			print 'Start crawling ' + categories[index] + '....'
-			while cnt < 50 and page_url != 'https://tw.bid.yahoo.com/tw/':
-				try:
-					html = urllib2.urlopen(page_url).read()
-				except:
-					print '### Access error ' + target
-					continue
+		page_url = target
+		mycnt = 0
+		print 'Start crawling ' + categories[index] + '....'
+		while page_url != 'https://tw.bid.yahoo.com/tw/':
+			request = urllib2.Request(page_url, None, headers)
+			try:
+				response = urllib2.urlopen(request)
+			except URLError as e:
+				print '*** Access error ***'
+				print e.reason
+				continue
 
-				soup = BeautifulSoup(html, 'html5lib')
-				links = soup.find_all('div', class_ = 'srp-pdtitle ellipsis')
-				for link in links:
-					l = str(BeautifulSoup(str(link), 'html5lib').find('a')['href'])
-					if re.search('auction', l) != None:		# 避開 yahoo 商城
-						product = extract_content(l)
+			html = response.read()
 
-						if product != 'error':
-							item = ET.SubElement(body, 'item')
-							name = ET.SubElement(item, 'name')
-							name.text = product['name']
-							time = ET.SubElement(item, 'time')
-							time.text = product['time']
-							price = ET.SubElement(item, 'price')
-							price.text = product['price']
-							amount = ET.SubElement(item, 'amount')
-							amount.text = product['amount']
-							suc_cnt += 1
+			soup = BeautifulSoup(html, 'html5lib')
+			items = soup.find_all('div', class_ = 'yui3-u srp-pdcontent')
+			for item in items:
+				title_sec = item.find('div', class_ = 'srp-pdtitle ellipsis')
+				link = str(title_sec.find('a')['href'])		# item's link
 
-					cnt += 1
-					if cnt >= 30:
-						break
-					sleep(1)
+				if re.search('auction', link) != None:
+					# yahoo 拍賣項目
+					title = title_sec.get_text().strip()
+					price = item.find('div', class_ = 'yui3-u div1').find('em').get_text()
+					amount = item.find('span', class_ = 'div2 yui3-u').find('span').get_text()
+					if amount == '-':
+						amount = '0'
+					items_root.add_item(title, None, price, amount)
+					items_total += 1
 
-				# --- find next page ---
-				next_page = soup.find('li', class_ = 'next-page yui3-u').find('a')['href']
-				page_url = 'https://tw.bid.yahoo.com/tw/' + next_page
+				else:
+					# yahoo 超級商城項目
+					continue	# 先跳過
+					'''
+					prod = extract_content_mall(link, headers)
 
-			total = ET.SubElement(head, 'total')
-			total.text = str(suc_cnt)
-			print categories[index] + ' done....'
-			tree = ET.ElementTree(root)
-			tree.write(categories[index] + '.xml', encoding = 'utf-8', xml_declaration = True, pretty_print = True)
-			count += 1
+					if prod != 'error':
+						items_root.add_item(prod['name'], None, prod['price'], prod['amount'])
+						items_total += 1
+
+					# still need to find the appropriate delay interval.....
+					sleep(3)
+					'''
+
+			sleep(1)
+
+			# count crawled pages
+			mycnt += 1
+			if mycnt >= 5:	# number of pages to be crawled
+				break
+			print 'page#' + str(mycnt) + ' done'
+
+			# --- find next page ---
+			next_page = soup.find('li', class_ = 'next-page yui3-u').find('a')['href']
+			page_url = 'https://tw.bid.yahoo.com/tw/' + next_page
+
+		items_root.add_total(items_total)
+		print categories[index] + ' done....'
+		tree = ET.ElementTree(items_root.get_root())
+		tree.write(categories[index] + '.xml', encoding = 'utf-8', xml_declaration = True, pretty_print = True)
 
 
 if __name__ == '__main__':
-	crawler()
+	target_url = 'https://tw.bid.yahoo.com/tw/23000-allsubcats.html?.r=1400475784'
+	user_agent = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.114 Safari/537.36'
+
+	headers = {'User-Agent': user_agent}
+	crawler(target_url, headers)
