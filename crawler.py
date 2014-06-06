@@ -51,9 +51,9 @@ def extract_content_mall(url, headers):
 
 	try:
 		response = urllib2.urlopen(request)
-	except:
+	except urllib2.URLError as e:
 		print '*** Access error ***'
-		print url
+		print e.reason
 		return 'error'
 
 	html = response.read()
@@ -96,7 +96,7 @@ def crawler(target_url, headers):
 
 	try:
 		response = urllib2.urlopen(request)
-	except URLError as e:
+	except urllib2.URLError as e:
 		print '*** Access error ***'
 		print e.reason
 
@@ -117,8 +117,6 @@ def crawler(target_url, headers):
 			categories.append(cat)
 
 	for index, target in enumerate(targets):
-		print 'start ' + categories[index]
-
 		# Build xml structure
 		items_root = AuctionItem(categories[index])
 		items_total = 0
@@ -130,7 +128,7 @@ def crawler(target_url, headers):
 			request = urllib2.Request(page_url, None, headers)
 			try:
 				response = urllib2.urlopen(request)
-			except URLError as e:
+			except urllib2.URLError as e:
 				print '*** Access error ***'
 				print e.reason
 				continue
@@ -171,18 +169,20 @@ def crawler(target_url, headers):
 
 			# count crawled pages
 			mycnt += 1
+			print 'page#' + str(mycnt) + ' done'
 			if mycnt >= 5:	# number of pages to be crawled
 				break
-			print 'page#' + str(mycnt) + ' done'
 
 			# --- find next page ---
-			next_page = soup.find('li', class_ = 'next-page yui3-u').find('a')['href']
+			tag = soup.find('li', class_ = 'next-page yui3-u')
+			if not (tag is None):
+				next_page = tag.find('a')['href']
 			page_url = 'https://tw.bid.yahoo.com/tw/' + next_page
 
 		items_root.add_total(items_total)
 		print categories[index] + ' done....'
 		tree = ET.ElementTree(items_root.get_root())
-		tree.write('./data/' + categories[index] + '.xml', encoding = 'utf-8', xml_declaration = True, pretty_print = True)
+		tree.write('./data/' + str(index) + '_' + categories[index] + '.xml', encoding = 'utf-8', xml_declaration = True, pretty_print = True)
 
 
 if __name__ == '__main__':
