@@ -182,7 +182,7 @@ def crawler(target_url, headers):
 		items_root.add_total(items_total)
 		print categories[index] + ' done....'
 		tree = ET.ElementTree(items_root.get_root())
-		tree.write(categories[index] + '.xml', encoding = 'utf-8', xml_declaration = True, pretty_print = True)
+		tree.write('./data/' + categories[index] + '.xml', encoding = 'utf-8', xml_declaration = True, pretty_print = True)
 
 
 if __name__ == '__main__':
