@@ -113,7 +113,7 @@ def crawler(target_url, headers):
 		l = str(link['href'])
 		cat = link.get_text()
 		if pattern.search(l) != None:
-			targets.append(l)
+			targets.append(l + '&sort=-bidcnt')
 			categories.append(cat)
 
 	for index, target in enumerate(targets):

@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<auction>
+  <head>
+    <website>Yahoo!奇摩拍賣</website>
+    <category>女裝與服飾配件</category>
+    <subcategory>七分袖針織衫</subcategory>
+    <date>2014-06-22 18:35:41</date>
+    <total>6</total>
+  </head>
+  <body>
+    <item>
+      <name>SenseHolic【D205】歐式經典配色針織上衣</name>
+      <price>290</price>
+      <amount>173</amount>
+    </item>
+    <item>
+      <name>黑白條紋七分袖針織衫 【442AF】</name>
+      <price>340</price>
+      <amount>17</amount>
+    </item>
+    <item>
+      <name>chan 0607117 韓 亮麗舒適質料平領細織七分袖衫 免運</name>
+      <price>750</price>
+      <amount>8</amount>
+    </item>
+    <item>
+      <name>4347~○o°。晨槿˙99起標/無底價 °☆+:° ～時尚珍珠白蕾絲彈性假2件式蝙蝠袖造型美衣*F</name>
+      <price>119</price>
+      <amount>3</amount>
+    </item>
+    <item>
+      <name>[New Auction]Cathy（多+直+競-達到底價01）商品皆為測試使用, 所有訂單一律取消</name>
+      <price>20</price>
+      <amount>3</amount>
+    </item>
+    <item>
+      <name>＊EBO_KR＊ 韓 免運 七分寬袖條紋細針織上衣</name>
+      <price>650</price>
+      <amount>1</amount>
+    </item>
+  </body>
+</auction>
